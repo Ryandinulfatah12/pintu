@@ -1,0 +1,21 @@
+# Data dan rahasia lokal
+data/
+.env
+.env.*
+!.env.example
+*.db
+*.db-shm
+*.db-wal
+!testdata/*.db
+*.tgz
+
+# Hasil build
+/pintu
+/pintu.exe
+/dist/
+
+# Editor dan OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

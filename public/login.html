@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Masuk — Pintu</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='3' y='2' width='4' height='12' rx='1' fill='%233b5bdb'/><rect x='9' y='2' width='4' height='12' rx='1' fill='%239a5400'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/assets/style.css?v=2">
+</head>
+<body>
+  <main class="login-wrap">
+    <form class="login" id="login-form">
+      <h1 class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span>Pintu</h1>
+      <p class="lede">Masuk untuk membuka koneksi RDP dan SSH kamu.</p>
+      <label class="field"><span>Username</span>
+        <input type="text" name="username" autocomplete="username" required autofocus>
+      </label>
+      <label class="field"><span>Password</span>
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <p class="error-text" id="login-error" role="alert"></p>
+      <button class="btn primary" type="submit">Masuk</button>
+    </form>
+  </main>
+  <script src="/assets/login.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Menghubungkan… — Pintu</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='3' y='2' width='4' height='12' rx='1' fill='%233b5bdb'/><rect x='9' y='2' width='4' height='12' rx='1' fill='%239a5400'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/assets/style.css?v=2">
+</head>
+<body class="session-body">
+  <div id="viewport"><div id="display" tabindex="0"></div></div>
+
+  <div class="hud" id="hud" role="toolbar" aria-label="Kontrol sesi">
+    <span class="title" id="hud-title">…</span>
+    <button class="btn" type="button" id="btn-cad" hidden>Ctrl+Alt+Del</button>
+    <button class="btn" type="button" id="btn-clip" aria-expanded="false">Clipboard</button>
+    <button class="btn" type="button" id="btn-full">Layar penuh</button>
+    <button class="btn danger" type="button" id="btn-end">Putuskan</button>
+  </div>
+
+  <div class="clip" id="clip" hidden>
+    <p id="clip-help">Teks yang disalin di remote muncul di sini. Tempel teks lalu kirim untuk memasukkannya ke clipboard remote.</p>
+    <textarea id="clip-text" spellcheck="false" aria-label="Isi clipboard"></textarea>
+    <div class="actions">
+      <button class="btn" type="button" id="clip-close">Tutup</button>
+      <button class="btn primary" type="button" id="clip-send">Kirim ke remote</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="card">
+      <div class="spinner" id="ov-spin"></div>
+      <h1 id="ov-title">Menghubungkan…</h1>
+      <p id="ov-text"></p>
+      <div class="actions" id="ov-actions" hidden>
+        <button class="btn primary" type="button" id="btn-retry">Hubungkan ulang</button>
+        <a class="btn" href="/">Kembali ke daftar</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/assets/session.js?v=2"></script>
+</body>
+</html>

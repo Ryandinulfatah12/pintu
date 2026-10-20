@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pintu</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='3' y='2' width='4' height='12' rx='1' fill='%233b5bdb'/><rect x='9' y='2' width='4' height='12' rx='1' fill='%239a5400'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/assets/style.css?v=2">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <p class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span>Pintu</p>
+      <input class="search" type="search" id="search" placeholder="Cari nama, host, atau user…" aria-label="Cari koneksi">
+      <span class="spacer"></span>
+      <button class="btn primary" id="btn-add" type="button">Tambah koneksi</button>
+      <button class="btn ghost" id="btn-logout" type="button">Keluar</button>
+    </header>
+
+    <div class="layout">
+      <nav class="sidebar" aria-label="Grup">
+        <h2>Grup</h2>
+        <ul class="groups" id="groups"></ul>
+      </nav>
+
+      <main class="main">
+        <div class="list-head">
+          <h1 id="list-title">Semua koneksi</h1>
+          <p id="list-summary"></p>
+        </div>
+        <ul class="conns" id="conns" hidden></ul>
+        <div class="empty" id="empty" hidden>
+          <h2>Belum ada koneksi</h2>
+          <p>Tambahkan server pertama kamu: RDP untuk desktop Windows, SSH untuk server Linux. Sesi terbuka di tab baru, langsung di browser.</p>
+          <button class="btn primary" type="button" data-action="add">Tambah koneksi</button>
+        </div>
+        <div class="empty" id="no-match" hidden>
+          <h2>Tidak ada yang cocok</h2>
+          <p>Coba kata kunci lain, atau pilih grup “Semua”.</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="dlg">
+    <form id="conn-form" method="dialog" novalidate>
+      <div class="dlg-head">
+        <h2 id="dlg-title">Tambah koneksi</h2>
+        <button class="btn ghost icon" type="button" data-action="close" aria-label="Tutup">✕</button>
+      </div>
+
+      <div class="dlg-body">
+        <div class="segmented" role="radiogroup" aria-label="Protokol">
+          <label><input type="radio" name="protocol" value="rdp" checked><span>RDP</span></label>
+          <label><input type="radio" name="protocol" value="ssh"><span>SSH</span></label>
+        </div>
+
+        <div class="row">
+          <label class="field"><span>Nama</span>
+            <input type="text" name="name" required maxlength="80" placeholder="PC Kantor">
+          </label>
+          <label class="field"><span>Grup</span>
+            <input type="text" name="group" maxlength="60" list="group-list" placeholder="Rumah">
+            <datalist id="group-list"></datalist>
+          </label>
+        </div>
+
+        <div class="row host">
+          <label class="field"><span>Host atau IP</span>
+            <input type="text" name="hostname" required maxlength="253" placeholder="192.168.0.20" autocapitalize="off" spellcheck="false">
+          </label>
+          <label class="field"><span>Port</span>
+            <input type="number" name="port" min="1" max="65535" placeholder="3389">
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="field"><span>Username</span>
+            <input type="text" name="username" maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </label>
+          <label class="field"><span>Password</span>
+            <input type="password" name="password" autocomplete="new-password">
+            <small id="pw-hint" hidden>Tersimpan. Kosongkan untuk tetap pakai yang lama.</small>
+          </label>
+        </div>
+        <label class="check" id="pw-clear-wrap" hidden><input type="checkbox" name="clearPassword"> Hapus password tersimpan</label>
+
+        <fieldset class="section" data-for="rdp">
+          <legend>Pengaturan RDP</legend>
+          <div class="row">
+            <label class="field"><span>Domain</span>
+              <input type="text" name="domain" maxlength="120" placeholder="Opsional">
+            </label>
+            <label class="field"><span>Mode keamanan</span>
+              <select name="security">
+                <option value="any">Otomatis</option>
+                <option value="nla">NLA</option>
+                <option value="tls">TLS</option>
+                <option value="rdp">RDP standar</option>
+              </select>
+            </label>
+          </div>
+          <label class="field"><span>Profil tampilan</span>
+            <select name="quality">
+              <option value="fast">Cepat: latensi rendah (warna 16-bit, tanpa efek)</option>
+              <option value="quality">Kualitas: warna penuh, font halus, tema</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" name="ignoreCert" checked> Abaikan sertifikat self-signed</label>
+          <label class="check"><input type="checkbox" name="audio" checked> Teruskan audio</label>
+          <label class="check"><input type="checkbox" name="wallpaper"> Tampilkan wallpaper (lebih berat)</label>
+        </fieldset>
+
+        <fieldset class="section" data-for="ssh" hidden>
+          <legend>Pengaturan SSH</legend>
+          <label class="field"><span>Private key</span>
+            <textarea name="privateKey" rows="4" spellcheck="false" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
+            <small id="key-hint" hidden>Key tersimpan. Kosongkan untuk tetap pakai yang lama.</small>
+          </label>
+          <label class="check" id="key-clear-wrap" hidden><input type="checkbox" name="clearKey"> Hapus private key tersimpan</label>
+          <label class="field"><span>Passphrase key</span>
+            <input type="password" name="passphrase" autocomplete="new-password" placeholder="Kalau key-nya pakai passphrase">
+          </label>
+          <div class="row">
+            <label class="field"><span>Ukuran font</span>
+              <input type="number" name="fontSize" min="8" max="32" value="12">
+            </label>
+            <label class="field"><span>Warna terminal</span>
+              <select name="colorScheme">
+                <option value="gray-black">Abu di hitam</option>
+                <option value="green-black">Hijau di hitam</option>
+                <option value="white-black">Putih di hitam</option>
+                <option value="black-white">Hitam di putih</option>
+              </select>
+            </label>
+          </div>
+        </fieldset>
+
+        <label class="field section"><span>Catatan</span>
+          <textarea name="notes" rows="2" maxlength="2000" style="font-family: var(--sans); font-size: 14px;"></textarea>
+        </label>
+
+        <p class="error-text" id="form-error" role="alert"></p>
+      </div>
+
+      <div class="dlg-foot">
+        <button class="btn danger" type="button" id="btn-delete" hidden>Hapus koneksi</button>
+        <span class="spacer"></span>
+        <button class="btn" type="button" data-action="close">Batal</button>
+        <button class="btn primary" type="submit" id="btn-save">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="row-tpl">
+    <li class="conn">
+      <span class="proto"></span>
+      <div class="conn-name"><strong></strong><span></span></div>
+      <div class="conn-addr"></div>
+      <div class="reach" data-state="unknown"><span class="dot"></span><span class="reach-text">Mengecek…</span></div>
+      <div class="conn-actions">
+        <a class="btn primary" target="_blank" rel="noopener">Buka</a>
+        <button class="btn icon ghost" type="button" data-action="edit" aria-label="Ubah">✎</button>
+      </div>
+    </li>
+  </template>
+
+  <script src="/assets/app.js?v=2"></script>
+</body>
+</html>

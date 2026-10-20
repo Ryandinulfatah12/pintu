@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 224 96" width="224" height="96" role="img" aria-label="Pintu">
+  <rect x="4" y="29.5" width="18" height="48" rx="4.5" fill="#3b5bdb"/>
+  <rect x="26" y="29.5" width="18" height="48" rx="4.5" fill="#9a5400"/>
+  <circle cx="18" cy="55.5" r="2.4" fill="#ffffff"/>
+  <circle cx="30" cy="55.5" r="2.4" fill="#ffffff"/>
+  <g transform="translate(60 24)" fill="none" stroke="#172130" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 22V64"/>
+    <circle cx="18" cy="36" r="14"/>
+    <path d="M45 22V50"/>
+    <path d="M59 22V50M59 36a14 14 0 0 1 28 0V50"/>
+    <path d="M106 12V42q0 8 8 8M99 22h15"/>
+    <path d="M126 22V36a14 14 0 0 0 28 0M154 22V50"/>
+  </g>
+  <circle cx="105" cy="34" r="4.5" fill="#172130"/>
+</svg>

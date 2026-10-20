@@ -1,0 +1,35 @@
+services:
+  guacd:
+    image: guacamole/guacd:1.5.5
+    container_name: pintu-guacd
+    restart: unless-stopped
+    # guacd hanya dipakai untuk RDP (SSH ditangani langsung oleh pintu).
+    # guacd yang membuka koneksi RDP ke target, jadi dia butuh akses ke LAN / host.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks: [pintu]
+
+  pintu:
+    build: .
+    container_name: pintu
+    restart: unless-stopped
+    depends_on: [guacd]
+    env_file: .env
+    environment:
+      GUACD_HOST: guacd
+      GUACD_PORT: "4822"
+      DATA_DIR: /data
+    volumes:
+      - pintu-data:/data
+    # Hanya listen di localhost; akses publik lewat Cloudflare Tunnel / reverse proxy.
+    ports:
+      - "127.0.0.1:7790:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks: [pintu]
+
+volumes:
+  pintu-data:
+
+networks:
+  pintu: {}
