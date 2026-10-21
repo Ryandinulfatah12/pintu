@@ -106,9 +106,73 @@ Semua konfigurasi lewat environment variable (file `.env` saat memakai Compose).
 | `COOKIE_SECURE` | `false` | Set `true` kalau diakses lewat HTTPS. Dengan `true`, login hanya bisa lewat HTTPS. |
 | `SESSION_HOURS` | `12` | Lama sesi login (jam). |
 | `LOG_LEVEL` | `NORMAL` | `QUIET`, `ERRORS`, `NORMAL`, `VERBOSE`, atau `DEBUG`. |
+| `LOG_FILE` | kosong (stderr) | Tulis log ke file ini. Dirotasi ke `.old` saat lebih dari 10 MB. Dipakai service Windows. |
 | `PORT` | `8080` | Port HTTP. Pintu listen di semua interface; di Compose, port ini hanya dipublish ke `127.0.0.1:7790`. |
 | `DATA_DIR` | `./data` di sebelah binary | Lokasi `pintu.db`. Di Compose: `/data` (volume `pintu-data`). |
 | `GUACD_HOST` / `GUACD_PORT` | `127.0.0.1` / `4822` | Alamat `guacd`. Di Compose: `guacd:4822`. |
+
+Di luar Docker, Pintu juga membaca file env dengan format yang sama: `.env` di sebelah binary, atau file yang ditunjuk `pintu --config <file>`. Environment variable yang sudah di-set tetap menang atas isi file.
+
+## Windows (native)
+
+Pintu bisa jalan langsung di Windows 10/11 sebagai Windows Service, tanpa Docker untuk Pintu-nya sendiri.
+
+### Pakai installer
+
+Unduh `pintu-<versi>-windows-amd64-setup.exe` (atau `arm64`) dari halaman [Releases](https://github.com/Ryandinulfatah12/pintu/releases), lalu jalankan. Installer akan:
+
+- memasang `pintu.exe` ke `C:\Program Files\Pintu`,
+- menanyakan username, password admin, port, dan apakah Pintu diakses lewat HTTPS,
+- menulis config ke `C:\ProgramData\Pintu\pintu.env` dengan `SECRET_KEY` acak, dan membatasi folder itu hanya untuk SYSTEM dan Administrators,
+- memasang dan menjalankan service **Pintu** (start otomatis saat boot, restart otomatis kalau crash).
+
+Database ada di `C:\ProgramData\Pintu\data`, log di `C:\ProgramData\Pintu\pintu.log`. Saat upgrade, config lama dipertahankan. Saat uninstall, kamu ditanya apakah data ikut dihapus.
+
+Pintu listen di semua interface, tapi Windows Firewall memblokir koneksi masuk dari jaringan kecuali kamu mencentang opsi firewall di installer. Binary belum ditandatangani, jadi SmartScreen mungkin memperingatkan saat installer pertama dijalankan (**More info → Run anyway**).
+
+### Pakai zip (tanpa installer)
+
+Ekstrak `pintu-<versi>-windows-amd64.zip`, salin `.env.example` jadi `.env` di folder yang sama, lalu isi `ADMIN_PASSWORD` dan `COOKIE_SECURE`. Dari PowerShell:
+
+```powershell
+.\pintu.exe config ensure-secret .env   # isi SECRET_KEY acak kalau masih kosong
+.\pintu.exe                             # jalan di foreground, Ctrl+C untuk berhenti
+```
+
+Untuk menjadikannya service, jalankan dari PowerShell **sebagai Administrator**:
+
+```powershell
+.\pintu.exe service install --config C:\path\ke\.env
+.\pintu.exe service start
+# pintu.exe service stop | service uninstall
+```
+
+Simpan `.env` di folder yang tidak bisa dibaca user lain, karena isinya `SECRET_KEY` dan password admin. Set juga `LOG_FILE`, karena service tidak punya console.
+
+### RDP di Windows
+
+`guacd` tidak tersedia untuk Windows, jadi jalankan di Docker Desktop atau WSL. Default `GUACD_HOST=127.0.0.1` dan `GUACD_PORT=4822` sudah cocok:
+
+```powershell
+docker run -d --name guacd --restart unless-stopped -p 127.0.0.1:4822:4822 guacamole/guacd:1.5.5
+```
+
+SSH tidak butuh `guacd` sama sekali.
+
+### Build dari source
+
+Butuh Go 1.24+ dan PowerShell. Untuk installer, butuh juga [Inno Setup 6.3+](https://jrsoftware.org/isinfo.php) (`winget install JRSoftware.InnoSetup`).
+
+```powershell
+.uild.ps1                          # vet + test, lalu dist\pintu-<versi>-windows-{amd64,arm64}.zip
+.uild.ps1 -Arch amd64 -Installer   # plus dist\pintu-<versi>-windows-amd64-setup.exe
+```
+
+Versi diambil dari `git describe` (atau `-Version v1.2.0`), lalu ditanam ke binary (`pintu.exe version`) dan ke info file Windows. Push tag `v*` ke GitHub menjalankan workflow `release-windows.yml`, yang mem-build zip dan installer lalu mengunggahnya ke Releases.
+
+### Backup di Windows
+
+Hentikan service (`pintu.exe service stop`), salin folder `C:\ProgramData\Pintu` (berisi `pintu.env` dengan `SECRET_KEY`, dan database), lalu jalankan lagi dengan `pintu.exe service start`.
 
 ## Akses dari internet
 
@@ -233,7 +297,9 @@ go test ./...
 Pintu awalnya ditulis di Node.js. `testdata/` memastikan database dan cookie dari versi lama tetap terbaca oleh versi Go.
 
 ```
-main.go              config, routing, API koneksi
+main.go              config, subcommand, routing, API koneksi
+envfile.go           baca file .env, generate SECRET_KEY
+service_windows.go   Windows Service (install/start/stop + handler SCM)
 auth.go              login, cookie sesi bertanda tangan HMAC, rate limit
 store.go             SQLite, enkripsi kredensial, validasi
 session.go           token sesi sekali pakai, cek status terjangkau
@@ -243,6 +309,9 @@ public/assets/       dashboard (app.js), sesi (session.js → rdp.js / ssh.js)
 public/vendor/       guacamole-common-js 1.5.0, xterm.js 5.5.0 (+ addon fit 0.10, webgl 0.18)
 testdata/            database dari versi Node.js untuk tes kompatibilitas
 docs/                logo dan screenshot
+winres/              icon dan info versi untuk pintu.exe (go-winres)
+installer/           script Inno Setup untuk installer Windows
+build.ps1            build Windows: zip dan installer
 ```
 
 Issue dan pull request dipersilakan. Jalankan `go vet ./...` dan `go test ./...` sebelum mengirim PR.

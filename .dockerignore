@@ -6,3 +6,5 @@ testdata
 *_test.go
 docs
 *.md
+*.syso
+dist

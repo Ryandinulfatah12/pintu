@@ -158,6 +158,65 @@ func TestValidation(t *testing.T) {
 	}
 }
 
+func TestEnvFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pintu.env")
+	content := "# komentar\n\nPINTU_T_A=satu\r\n  PINTU_T_B = \"dua tiga\" \nexport PINTU_T_C='4'\nPINTU_T_D=x=y\nPINTU_T_KEEP=file\nbukan baris\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PINTU_T_KEEP", "env")
+	for _, k := range []string{"PINTU_T_A", "PINTU_T_B", "PINTU_T_C", "PINTU_T_D"} {
+		t.Setenv(k, "")
+		os.Unsetenv(k)
+	}
+	if err := loadEnvFile(path); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{"PINTU_T_A": "satu", "PINTU_T_B": "dua tiga", "PINTU_T_C": "4", "PINTU_T_D": "x=y", "PINTU_T_KEEP": "env"}
+	for k, v := range want {
+		if got := os.Getenv(k); got != v {
+			t.Errorf("%s = %q, want %q", k, got, v)
+		}
+	}
+	if err := loadEnvFile(filepath.Join(t.TempDir(), "tidak-ada.env")); err == nil {
+		t.Error("loadEnvFile on missing file should fail")
+	}
+}
+
+func TestEnsureSecret(t *testing.T) {
+	dir := t.TempDir()
+	secretOf := func(path string) string {
+		data, _ := os.ReadFile(path)
+		for _, line := range strings.Split(string(data), "\n") {
+			if k, v, ok := parseEnvLine(line); ok && k == "SECRET_KEY" {
+				return v
+			}
+		}
+		return ""
+	}
+
+	empty := filepath.Join(dir, "empty.env")
+	os.WriteFile(empty, []byte("# Wajib\nSECRET_KEY=\nADMIN_USER=admin\n"), 0o600)
+	missing := filepath.Join(dir, "missing.env")
+	os.WriteFile(missing, []byte("ADMIN_USER=admin"), 0o600)
+	for _, path := range []string{empty, missing} {
+		if err := ensureSecret(path); err != nil {
+			t.Fatal(err)
+		}
+		key := secretOf(path)
+		if len(key) != 64 {
+			t.Errorf("%s: SECRET_KEY = %q, want 64 hex chars", filepath.Base(path), key)
+		}
+		data, _ := os.ReadFile(path)
+		if !strings.Contains(string(data), "ADMIN_USER=admin\n") || strings.Count(string(data), "SECRET_KEY=") != 1 {
+			t.Errorf("%s: unexpected content %q", filepath.Base(path), data)
+		}
+		if err := ensureSecret(path); err != nil || secretOf(path) != key {
+			t.Errorf("%s: second ensureSecret changed the key", filepath.Base(path))
+		}
+	}
+}
+
 func TestRDPProfiles(t *testing.T) {
 	fast := rdpSettings(&target{RDP: rdpOptions{Quality: "fast"}})
 	if fast["color-depth"] != "16" || fast["enable-font-smoothing"] != "false" || fast["enable-theming"] != "false" {

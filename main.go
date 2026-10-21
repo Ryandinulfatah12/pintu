@@ -97,26 +97,106 @@ type app struct {
 	status *statusCache
 }
 
+// version is set at build time: -ldflags "-X main.version=v1.2.3".
+var version = "dev"
+
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
-		os.Exit(healthcheck())
+	args := os.Args[1:]
+	configPath := ""
+	if len(args) >= 2 && (args[0] == "--config" || args[0] == "-config") {
+		configPath, args = args[1], args[2:]
+	}
+
+	if len(args) > 0 {
+		switch args[0] {
+		case "healthcheck":
+			os.Exit(healthcheck())
+		case "version", "--version":
+			fmt.Println("pintu", version)
+			return
+		case "config":
+			if len(args) != 3 || args[1] != "ensure-secret" {
+				fatal(errors.New("pemakaian: pintu config ensure-secret <file>"))
+			}
+			fatal(ensureSecret(args[2]))
+			return
+		case "service":
+			fatal(serviceCommand(args[1:], configPath))
+			return
+		default:
+			fatal(fmt.Errorf("perintah tidak dikenal: %s", args[0]))
+		}
+	}
+
+	if configPath == "" {
+		exe, _ := os.Executable()
+		if p := filepath.Join(filepath.Dir(exe), ".env"); fileExists(p) {
+			configPath = p
+		}
+	}
+	if configPath != "" {
+		if err := loadEnvFile(configPath); err != nil {
+			fatal(err)
+		}
+	}
+
+	if isService() {
+		fatal(runService())
+		return
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	fatal(run(ctx))
+}
+
+func fatal(err error) {
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
+// openLogFile sends the log to path, rotating it to path.old once it grows past 10 MB.
+func openLogFile(path string) error {
+	if info, err := os.Stat(path); err == nil && info.Size() > 10<<20 {
+		os.Rename(path, path+".old")
+	}
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return fmt.Errorf("gagal membuka LOG_FILE: %w", err)
+	}
+	log.SetOutput(f)
+	return nil
+}
+
+// run serves Pintu until ctx is cancelled.
+func run(ctx context.Context) error {
+	if p := os.Getenv("LOG_FILE"); p != "" {
+		if err := openLogFile(p); err != nil {
+			return err
+		}
 	}
 
 	cfg := loadConfig()
 	logLevel = cfg.logLevel
 
 	if len(cfg.secretKey) < 32 {
-		fmt.Fprintln(os.Stderr, "SECRET_KEY wajib diisi, minimal 32 karakter. Contoh: openssl rand -hex 32")
-		os.Exit(1)
+		return errors.New("SECRET_KEY wajib diisi, minimal 32 karakter. Contoh: openssl rand -hex 32")
 	}
 	if len(cfg.adminPassword) < 8 {
-		fmt.Fprintln(os.Stderr, "ADMIN_PASSWORD wajib diisi, minimal 8 karakter.")
-		os.Exit(1)
+		return errors.New("ADMIN_PASSWORD wajib diisi, minimal 8 karakter.")
 	}
 
 	st, err := openStore(cfg.dataDir, cfg.secretKey)
 	if err != nil {
-		log.Fatalf("Gagal membuka database: %v", err)
+		log.Printf("Gagal membuka database: %v", err)
+		return fmt.Errorf("gagal membuka database: %w", err)
 	}
 
 	a := &app{
@@ -133,21 +213,24 @@ func main() {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
+	errc := make(chan error, 1)
 	go func() {
-		log.Printf("Pintu jalan di http://0.0.0.0:%d (guacd: %s)", cfg.port, cfg.guacdAddr)
+		log.Printf("Pintu %s jalan di http://0.0.0.0:%d (guacd: %s)", version, cfg.port, cfg.guacdAddr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatal(err)
+			log.Print(err)
+			errc <- err
 		}
 	}()
 
-	<-ctx.Done()
+	select {
+	case <-ctx.Done():
+	case err = <-errc:
+	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	srv.Shutdown(shutdownCtx)
 	st.Close()
+	return err
 }
 
 // healthcheck is used by the Docker HEALTHCHECK (the image has no shell or curl).

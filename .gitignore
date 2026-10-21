@@ -13,6 +13,7 @@ data/
 /pintu
 /pintu.exe
 /dist/
+*.syso
 
 # Editor dan OS
 .vscode/

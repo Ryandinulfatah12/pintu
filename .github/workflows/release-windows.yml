@@ -1,0 +1,51 @@
+name: Release Windows
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # build.ps1 uses git describe for the version
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Pastikan Inno Setup ada
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc.exe -ErrorAction SilentlyContinue) -and
+              -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+
+      - name: Build
+        shell: pwsh
+        run: ./build.ps1 -Installer
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pintu-windows
+          path: |
+            dist/*.zip
+            dist/*-setup.exe
+
+      - name: Upload ke GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE -ne 0) { gh release create $env:TAG --generate-notes --title $env:TAG }
+          gh release upload $env:TAG (Get-ChildItem dist/*.zip, dist/*-setup.exe).FullName --clobber
